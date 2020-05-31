@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+
+<html>
+
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+        <title>Babylon Template</title>
+
+        <style>
+            html, body {
+                overflow: hidden;
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+                font-family: 'Silkscreen';
+            }
+
+            #renderCanvas {
+                width: 100%;
+                height: 100%;
+                touch-action: none;
+            }
+            
+            #fps {
+                position: absolute;
+                background-color: black;
+                border: 2px solid red;
+                text-align: center;
+                font-size: 16px;
+                color: white;
+                top: 15px;
+                right: 10px;
+                width: 60px;
+                height: 20px;
+            }
+            @font-face { 
+                font-family: 'Silkscreen';
+                src: url('res/slkscr.ttf') format('truetype'); 
+            }
+            
+        </style>
+    
+        <script src="https://preview.babylonjs.com/babylon.js"></script>
+        <script src="https://preview.babylonjs.com/gui/babylon.gui.min.js"></script>
+        <script src="https://preview.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+        <script src="ai.js"></script>
+        <script src="game.js"></script>
+        <script src="assets.js"></script>
+        <script src="map.js"></script>
+    </head>
+
+    <body>
+        <canvas id="renderCanvas" touch-action="none"></canvas>
+        <div id="fps">0</div>
+        
+        <script>
+            var canvas = document.getElementById("renderCanvas");
+            var engine = new BABYLON.Engine(canvas, true);
+            
+            // display fps
+            let divFps = document.getElementById("fps");
+            
+            var scene = new BABYLON.Scene(engine);
+            var assetsManager = new BABYLON.AssetsManager(scene);
+
+            monsterAssets.forEach(image => {
+                assetsManager.addTextureTask(image.name, image.filename).onSuccess = function(task) {
+                    task.texture.hasAlpha = true;
+                    task.texture.updateSamplingMode(BABYLON.Texture.NEAREST_SAMPLINGMODE);
+                    monsterTextures[image.name] = task.texture;
+                }
+            });
+            tileAssets.forEach(image => {
+                assetsManager.addTextureTask(image.name, image.filename).onSuccess = function(task) {
+                    task.texture.hasAlpha = true;
+                    task.texture.updateSamplingMode(BABYLON.Texture.NEAREST_SAMPLINGMODE);
+                    tileTextures[image.name] = task.texture;
+                }
+            });
+            effectAssets.forEach(image => {
+                assetsManager.addTextureTask(image.name, image.filename).onSuccess = function(task) {
+                    task.texture.hasAlpha = true;
+                    task.texture.updateSamplingMode(BABYLON.Texture.NEAREST_SAMPLINGMODE);
+                    effectTextures[image.name] = task.texture;
+                }
+            });
+            
+            assetsManager.onTaskErrorObservable.add(function(task) {
+                console.log('task failed', task.errorObject.message, task.errorObject.exception);
+            });
+            assetsManager.onProgress = function(remainingCount, totalCount, lastFinishedTask) {
+                engine.loadingUIText = 'Loading scene: ' + (totalCount-remainingCount) + ' out of ' + totalCount;
+            };
+
+            assetsManager.onFinish = function(tasks) {
+                
+                init(scene);
+                //BABYLON.SceneOptimizer.OptimizeAsync(scene,	OptimizerOptions(), null, null);
+            
+                engine.runRenderLoop(function() {
+                    Update();
+                    scene.render();
+                    
+                    // update fps
+                    divFps.innerHTML = engine.getFps().toFixed() + " fps";
+                });
+            };
+            
+            assetsManager.load();
+            
+            
+            var OptimizerOptions = function() {
+	            var result = new BABYLON.SceneOptimizerOptions(30, 2000); // limit 30 FPS min here
+
+	            var priority = 0;
+	            result.optimizations.push(new BABYLON.ShadowsOptimization(priority));
+	            result.optimizations.push(new BABYLON.LensFlaresOptimization(priority));
+
+	            // Next priority
+	            priority++;
+	            result.optimizations.push(new BABYLON.PostProcessesOptimization(priority));
+	            result.optimizations.push(new BABYLON.ParticlesOptimization(priority));
+
+	            // Next priority
+	            priority++;
+	            result.optimizations.push(new BABYLON.TextureOptimization(priority, 256));
+
+	            // Next priority
+	            priority++;
+	            result.optimizations.push(new BABYLON.RenderTargetsOptimization(priority));
+
+	            // Next priority
+	            priority++;
+	            result.optimizations.push(new BABYLON.HardwareScalingOptimization(priority, 4));
+	            
+	            return result;
+            }
+            
+            
+            
+            window.addEventListener("resize", function () {
+                engine.resize();
+            });
+            
+            
+            function pointerLockChanged(event) {
+                var controlEnabled = (
+                    document.mozPointerLockElement === canvas
+                    || document.webkitPointerLockElement === canvas
+                    || document.msPointerLockElement === canvas
+                    || document.pointerLockElement === canvas);
+                
+                if (!controlEnabled) {
+                    isLocked = false;
+                } else {
+                    isLocked = true;
+                }
+            }
+            document.addEventListener("pointerlockchange", pointerLockChanged, false);
+	        document.addEventListener("mspointerlockchange", pointerLockChanged, false);
+	        document.addEventListener("mozpointerlockchange", pointerLockChanged, false);
+	        document.addEventListener("webkitpointerlockchange", pointerLockChanged, false);
+        </script>
+    </body>
+
+</html>
