@@ -26,8 +26,6 @@ var time = 0;
 
 function init(scene) {
 
-    console.log("penis")
-
     scene.clearColor = new BABYLON.Color3(0, 0, 0);
     
     scene.gravity = new BABYLON.Vector3(0, -1, 0);
@@ -185,7 +183,7 @@ function Restart() {
     if (enemies)
         enemies.forEach(e => {e.dispose()});
     enemies = [];
-    for (var i=0; i<5; i++) {
+    for (var i=0; i<20; i++) {
         var x = 10 + Math.floor(Math.random() * MAP_WIDTH - 10);
         var y = 10 + Math.floor(Math.random() * MAP_HEIGHT - 10);
         

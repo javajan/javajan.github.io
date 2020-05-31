@@ -31,8 +31,6 @@ function InitMap() {
     
     var doorBase = CreateDoorBase(scene, "style3", tileTextures.open_door);
     
-    console.log("test")
-    
     var stoneStyle = {
         floors: [
             CreateFloorBase(scene, "stone", tileTextures.cobble_blood_8_old),
