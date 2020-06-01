@@ -260,7 +260,7 @@ function LoadLevel(levelIndex) {
     enemies = [];
     
     var monsterTextureKeys = Object.keys(monsterTextures);
-    for (var i=0; i<10; i++) {
+    for (var i=0; i<20; i++) {
         var x = Math.floor(Math.random() * MAP_WIDTH / 2);
         var y = Math.floor(Math.random() * MAP_HEIGHT / 2);
         
