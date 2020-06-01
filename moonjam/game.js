@@ -194,7 +194,7 @@ function LoadLevel(levelIndex) {
     if (items)
         items.forEach(i => {i.dispose()});
     items = [];
-    items.push(CreateItem(BOSS_KEY_ID, itemTextures.key, 0, 2, "res/DungeonCrawlStone/item/misc/key.png"));
+    items.push(CreateItem(BOSS_KEY_ID, itemTextures.key, 0, MAP_HEIGHT-3, "res/DungeonCrawlStone/item/misc/key.png"));
     //items.push(CreateItem(BOSS_KEY_ID, itemTextures.key, Math.floor(Math.random() * MAP_WIDTH), Math.floor(Math.random() * MAP_HEIGHT), "res/DungeonCrawlStone/item/misc/key.png"));
     
     // ################## (de)spawn enemies ##################
@@ -220,8 +220,8 @@ function LoadLevel(levelIndex) {
         projectiles.forEach(p => {p.dispose()});
     projectiles = [];
 
-    //player.position = new BABYLON.Vector3(0, TILE_SIZE / 2, (MAP_HEIGHT-1)*TILE_SIZE); // boss room
-    player.position = new BABYLON.Vector3(0, PLAYER_HEIGHT / 2, 0); // level start
+    player.position = new BABYLON.Vector3(0, PLAYER_HEIGHT / 2, (MAP_HEIGHT-1)*TILE_SIZE); // boss room
+    //player.position = new BABYLON.Vector3(0, PLAYER_HEIGHT / 2, 0); // level start
     camera.angle = Math.PI/2;
     player.data = {
         health: 100,
@@ -403,6 +403,9 @@ function Update() {
         }
         
         if (player.data.health <= 0 && !mapView) {
+            // #################  GUI  #################
+            healthText.text = "0 HP";
+            
             // game over
             currentGameStateTimer = 0;
             currentGameState = GameState.LostLevel;

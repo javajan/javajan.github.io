@@ -54,14 +54,6 @@ function PlayerUpdate() {
         playerMovement.z = -right.z;
     }
     
-    // TODO remove debug
-    if (keyboard[" "]) {
-        playerMovement.y = 0.1;
-    }
-    else if (keyboard["Ctrl"]) {
-        playerMovement.y = -0.1;
-    }
-    
     // #################   sprint   #################
     if (player.data.sprint < player.data.sprintMax) {
         player.data.sprint += Math.min (player.data.sprintMax, player.data.sprintRegen * delta);
