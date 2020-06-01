@@ -10,6 +10,7 @@ var isLocked = false;
 
 var projectiles;
 var projectileSpeed = 100;
+var projectileBase = null;
 
 var items;
 
@@ -41,6 +42,7 @@ let GameState = {
 }   
 var currentGameState = GameState.Playing;
 var currentGameStateTimer = 0;
+
 
 function init(scene) {
 
@@ -158,6 +160,14 @@ function init(scene) {
     
     lastPlayerPosition = player.position;
     
+    // projectile base
+    projectileBase = BABYLON.MeshBuilder.CreatePlane("projectileBase", {height: 2, width: 2}, scene);
+    var projectileMaterial = new BABYLON.StandardMaterial("projectile_mat", scene);
+    projectileMaterial.diffuseTexture = effectTextures.cloud_cold_2;
+    projectileMaterial.ambientColor = new BABYLON.Color3(1,1,1);
+    projectileMaterial.specularColor = new BABYLON.Color3(0,0,0);
+    projectileBase.material = projectileMaterial;
+    
     InitMap();
     LoadLevel(level);
 }
@@ -193,7 +203,7 @@ function LoadLevel(levelIndex) {
     enemies = [];
     
     var monsterTextureKeys = Object.keys(monsterTextures);
-    for (var i=0; i<10; i++) {
+    for (var i=0; i<15; i++) {
         var x = Math.floor(Math.random() * MAP_WIDTH);
         var y = Math.floor(Math.random() * MAP_HEIGHT);
         
@@ -294,6 +304,7 @@ function Update() {
             var item = items[i];
             
             // collect if players walks over
+            console.log(firstGameLoop)
             if (!firstGameLoop) { // for some reason collides with player at beginning of game?
                 if (item.intersectsMesh(player, false)) {
                     if (player.data.inventory.items.length < INVENTORY_CAPACITY) {
@@ -429,7 +440,7 @@ function Update() {
             infoText.text = "You have defeated all bosses :)";
             infoText.text = infoText.text + "\n" +  "But you can keep playing if you want";
             
-            if (currentGameStateTimer >= 4000) {
+            if (currentGameStateTimer >= 6000) {
                 LoadLevel(level+1);
             }
         }
@@ -447,7 +458,7 @@ function Update() {
     currentGameStateTimer += delta;
     
     keyboardReleased = [];
-    firstLoop = false;
+    firstGameLoop = false;
     lastPlayerPosition = player.position;
 }
 
@@ -462,22 +473,13 @@ function RotateTowardsMe(mypos, pos) {
 }
 
 function SpawnProjectile(pos, info) {
-    // TODO instanced rendering for HUGE FPS
-
-    var projectile = BABYLON.MeshBuilder.CreatePlane("projectile", {height: 2, width: 2}, scene);
-    var mat = new BABYLON.StandardMaterial("projectile_mat", scene);
-    
-    mat.diffuseTexture = effectTextures.cloud_cold_2;
-    mat.ambientColor = new BABYLON.Color3(1,1,1);
-    mat.specularColor = new BABYLON.Color3(0,0,0);
-    
-    var camDirection = camera.getDirection(new BABYLON.Vector3(0, 0, 1));
-    
-    projectile.material = mat;
+    var projectile = projectileBase.createInstance("projectile_instance");
     projectile.position.copyFrom(pos);
-    
     projectile.data = info;
-    
     projectiles.push(projectile);
 }
+
+
+
+
 

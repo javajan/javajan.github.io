@@ -33,7 +33,7 @@ function CreateBossInfo(index) {
                 enemy.data.health -= d;
                 enemy.data.timeLastDamage = time;
             },
-            health: 100,
+            health: 3000,
             timeLastDamage: -Infinity,
             openedDoors: [],
             inventory: {

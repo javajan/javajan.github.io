@@ -34,7 +34,6 @@ function PlayerUpdate() {
         if (player.data.sprint > player.data.sprintCost) {
             playerSpeed = 2 * playerSpeed;
             player.data.sprint -= player.data.sprintCost;
-            player.data.sprint = Math.max(0, player.data.sprint);
         }
     }
     
