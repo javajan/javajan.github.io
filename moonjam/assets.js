@@ -8,6 +8,7 @@ var tileAssets = [
     
     {name:"closed_door", filename: "res/DungeonCrawlStone/dungeon/doors/closed_door.png"},
     {name:"open_door", filename: "res/DungeonCrawlStone/dungeon/doors/open_door.png"},
+    {name:"sealed_door", filename: "res/DungeonCrawlStone/dungeon/doors/sealed_door.png"},
     
     {name:"pebble_brown_2_old", filename: "res/DungeonCrawlStone/dungeon/floor/pebble_brown_2_old.png"},
     {name:"pebble_brown_3_old", filename: "res/DungeonCrawlStone/dungeon/floor/pebble_brown_3_old.png"},
@@ -74,14 +75,36 @@ var tileAssets = [
     {name:"wall_flesh_6", filename: "res/DungeonCrawlStone/dungeon/wall/wall_flesh_6.png"},
 ];
 
+var itemTextures = {};
+var itemAssets = [
+    {name:"key", filename: "res/DungeonCrawlStone/item/misc/key.png"},
+];
+
 var effectTextures = {};
 var effectAssets = [
-    {name:"cloud_cold_2", filename: "res/DungeonCrawlStone/effect/cloud_cold_2.png"},
+    {name:"cloud_cold_2", filename: "res/DungeonCrawlStone/effect/cloud_fire_2.png"},
+];
+
+var bossTextures = {};
+var bossAssets = [
+    {name:"moon2COOM", filename: "res/moon2COOM.png"},
+    {name:"moon2H", filename: "res/moon2SMERG.png"},
+    {name:"moon2S", filename: "res/moon2S.png"},
 ];
 
 var monsterTextures = {};
 var monsterAssets = [
-    {name:"moon2COOM", filename: "res/moon2COOM.png"},
+    {name:"zombie_kraken_head", filename: "res/DungeonCrawlStone/monster/undead/zombies/zombie_kraken_head.png"},
+    {name:"zombie_ogre", filename: "res/DungeonCrawlStone/monster/undead/zombies/zombie_ogre.png"},
+    {name:"zombie_small", filename: "res/DungeonCrawlStone/monster/undead/zombies/zombie_small.png"},
+    {name:"zombie_crab", filename: "res/DungeonCrawlStone/monster/undead/zombies/zombie_crab.png"},
+
+
+    {name:"skeleton_humanoid_large_new", filename: "res/DungeonCrawlStone/monster/undead/skeletons/skeleton_humanoid_large_new.png"},
+
+    {name:"curse_toe", filename: "res/DungeonCrawlStone/monster/undead/curse_toe.png"},
+    {name:"curse_skull", filename: "res/DungeonCrawlStone/monster/undead/curse_skull.png"},
+    {name:"shadow_new", filename: "res/DungeonCrawlStone/monster/undead/shadow_new.png"},
 
     /*{name:"orc_warrior_new", filename: "res/DungeonCrawlStone/monster/orc_warrior_new.png"},
     {name:"deep_elf_fighter_old", filename: "res/DungeonCrawlStone/monster/deep_elf_fighter_old.png"},

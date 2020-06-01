@@ -1,44 +1,97 @@
 
 var enemies = [];
-var enemySpeed = 0.05;
+var enemySpeed = 0.03;
 
 let ENEMY_WIDTH = 12, ENEMY_HEIGHT = 12;
 
 // number of tiles
 var enemyViewDistance = 5;
 
-function CreateEnemy(enemyBase, x, y) {
-    var enemy = enemyBase.createInstance("enemy");
-    
-    enemy.position.x = x * TILE_SIZE;
-    enemy.position.y = ENEMY_HEIGHT / 2;
-    enemy.position.z = y * TILE_SIZE;
-    enemy.data = {
-        timeToAttack: 500,
-        attackTimer: 500,
-        attackRange: 5,
-        damage: 5,
-        health: 100,
-        lastDamageTaken: Infinity,
-    };
-    
-    return enemy;
-}
-
-function DestroyEnemy(enemy) {
-    enemy.dispose();
-}   
-
-function CreateEnemyBase(texture) {
-    var mesh = BABYLON.MeshBuilder.CreatePlane("monster", {height: ENEMY_HEIGHT, width: ENEMY_WIDTH}, scene);
+function CreateCustomEnemy(x, y, info, texture) {
+    var enemy = BABYLON.MeshBuilder.CreatePlane("enemy", {height: ENEMY_HEIGHT, width: ENEMY_WIDTH}, scene);
     
     var mat = new BABYLON.StandardMaterial("monster_material", scene);
     mat.diffuseTexture = texture;
     mat.ambientColor = new BABYLON.Color3(.8,.8,.8);
     mat.specularColor = new BABYLON.Color3(0,0,0);
+    enemy.material = mat;
     
-    mesh.material = mat;
-    mesh.isVisible = false;
+    enemy.position.x = x * TILE_SIZE;
+    enemy.position.y = ENEMY_HEIGHT / 2;
+    enemy.position.z = y * TILE_SIZE;
+    enemy.data = info;
+    
+    return enemy;
+}
+
+function CreatePatrolEnemy(x, y, texture) {
+    return CreateCustomEnemy(x, y, {
+        timeToAttack: 500,
+        attackTimer: 500,
+        attackRange: 5,
+        damage: Infinity,
+        health: 100,
+        timeLastDamage: -Infinity,
+        openedDoors: [],
+        inventory: {
+            items: [],
+        },
+        takeDamage: function(enemy, d) {
+            infoMessages.push({
+                message: "It does not seem to be affected by your bullets.",
+                timeLeft: 1000,
+            });
+        },
+        update: DefaultEnemyUpdate,
+    }, texture);
+}
+
+function CreateBasicEnemy(x, y, update, texture) {
+    return CreateCustomEnemy(x, y, {
+        timeToAttack: 500,
+        attackTimer: 500,
+        attackRange: TILE_SIZE/2,
+        damage: 10,
+        health: 100,
+        timeLastDamage: -Infinity,
+        openedDoors: [],
+        inventory: {
+            items: [],
+        },
+        takeDamage: function(enemy, d) {
+            enemy.data.health -= d;
+            enemy.data.timeLastDamage = time;
+        },
+        update: update,
+    }, texture);
+}
+
+function DefaultEnemyUpdate(enemy) {
+    if (CanSeePlayer(enemy)) {
+        FollowPlayer(enemy);
+    }
+    else {
+        // move to random point on map
+        if (!PathCompleted(enemy, enemy.data.currentPath)) {
+            MoveAlongPath(enemy, enemy.data.currentPath);
+        }
+        else {
+            // path done, find new path
+            var x = Math.floor(Math.random() * MAP_WIDTH);
+            var y = Math.floor(Math.random() * MAP_HEIGHT);
+            
+            enemy.data.currentPath = FindPath(enemy, x, y);
+            //DrawDebugPath(enemy, enemy.data.currentPath);
+        }
+    }
+}
+
+function DestroyEnemy(enemy) {
+    enemy.dispose();
+}
+
+function CreateEnemyBase(texture) {
+    
     
     return mesh;
 }
@@ -50,6 +103,7 @@ function FollowPlayer(enemy) {
         
     if (distance > 2) {
         var direction = player.position.subtract(enemy.position).normalize();
+        direction.y = 0;
         enemy.moveWithCollisions(direction.scale(enemySpeed * delta));
     }
     if (distance < enemy.data.attackRange) {
@@ -57,7 +111,7 @@ function FollowPlayer(enemy) {
         
         if (enemy.data.attackTimer <= 0) {
             // ATTACK
-            player.data.health -= enemy.data.damage;
+            player.data.takeDamage(enemy.data.damage);
             enemy.data.attackTimer = enemy.data.timeToAttack;
         }
     }
@@ -81,13 +135,11 @@ function CanSeePlayer(enemy) {
         return false;
 
     var direction = enemy.position.subtract(player.position).normalize();
-    var pp = player.position.add(direction);
 
     // TODO use multipick and check if door is in front of player, otherwise enemy cant see through doors
 
-    // turns out this is really slow, don't use often :)
-    var ray = new BABYLON.Ray(pp, direction, enemyViewDistance * TILE_SIZE);
-    var hit = scene.pickWithRay(ray);
+    var ray = new BABYLON.Ray(player.position, direction, enemyViewDistance * TILE_SIZE);
+    var hit = scene.pickWithRay(ray, RaycastNotPlayerAndNotOpenDoor);
     
     //let rayHelper = new BABYLON.RayHelper(ray);
 	//rayHelper.show(scene);
@@ -114,8 +166,19 @@ function MoveAlongPath(enemy, path) {
     
     var direction = moveTo.subtract(enemy.position);
     
-    enemy.position = enemy.position.add(direction.scale(enemySpeed * 100 * delta));
-    //enemy.moveWithCollisions(direction.scale(0.2));
+    //enemy.position = enemy.position.add(direction.scale(enemySpeed * 100 * delta));
+    enemy.moveWithCollisions(direction.scale(0.05 * 100 * delta));
+    
+    map.doors.forEach(door => {
+        if (!door.data.isOpen) {
+            var distance = door.position.subtract(enemy.position).length();
+            
+            if (distance < TILE_SIZE) {
+                door.data.open(enemy);
+                enemy.data.openedDoors.push(door);
+            }
+        }
+    });
 }
 
 function PathCompleted(enemy, path) {

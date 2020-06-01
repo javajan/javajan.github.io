@@ -2,6 +2,8 @@
 var camera;
 
 var keyboard = [];
+var keyboardReleased = [];
+
 var mouse = [];
 
 var isLocked = false;
@@ -9,20 +11,36 @@ var isLocked = false;
 var projectiles;
 var projectileSpeed = 100;
 
+var items;
+
 var mapView = false;
 
 var player;
 let mouseSens = 10000;
 var flashlight = null;
 
-let PLAYER_HEIGHT = 4;
+let PLAYER_HEIGHT = 20;
+let INVENTORY_CAPACITY = 3;
 
-var healthText, sprintText;
-var gunImage;
+var infoMessages = [];
 
-var enemyTypeCOOMER;
+var firstGameLoop = true;
+
+var boss = null;
 
 var time = 0;
+
+var level = 0;
+
+var lastPlayerPosition = null;
+
+let GameState = {
+    Playing: 0,
+    LostLevel: 1,
+    WonLevel: 2,
+}   
+var currentGameState = GameState.Playing;
+var currentGameStateTimer = 0;
 
 function init(scene) {
 
@@ -31,8 +49,7 @@ function init(scene) {
     scene.gravity = new BABYLON.Vector3(0, -1, 0);
     scene.collisionsEnabled = true;
     
-    player = BABYLON.MeshBuilder.CreateBox("Player", {height: PLAYER_HEIGHT, width: 1, depth: 1}, scene);
-    player.position.y = 7.5;
+    player = BABYLON.MeshBuilder.CreateBox("Player", {height: PLAYER_HEIGHT, width: 3, depth: 3}, scene);
     player.checkCollisions = true;
     
     // camera setup
@@ -61,7 +78,6 @@ function init(scene) {
         camera.parent = player;
        
         // setup lighting
-        scene.ambientColor = new BABYLON.Color3(.4, .4, .4);
         flashlight = new BABYLON.SpotLight(  "flashlight", 
                                         new BABYLON.Vector3(0, 5, 0), 
                                         new BABYLON.Vector3(0, 0, 1), 
@@ -76,12 +92,13 @@ function init(scene) {
             case BABYLON.KeyboardEventTypes.KEYDOWN:
                 keyboard[kbInfo.event.key] = true;
                 if (kbInfo.event.key == "r") {
-                    Restart();
+                    LoadLevel(level);
                 }   
                 
                 break;
             case BABYLON.KeyboardEventTypes.KEYUP:
                 keyboard[kbInfo.event.key] = false;
+                keyboardReleased[kbInfo.event.key] = true;
                 break;
         }
     });
@@ -113,9 +130,11 @@ function init(scene) {
         }
 	    
 	    if (pointerInfo.type == BABYLON.PointerEventTypes.POINTERMOVE) {
-	        var mouseX = pointerInfo.event.movementX;
-            var mouseY = pointerInfo.event.movementY;
-            player.rotate(BABYLON.Axis.Y, mouseX * engine.getDeltaTime() / mouseSens, BABYLON.Space.WORLD);
+	        if (currentGameState != GameState.LostLevel) {
+	            var mouseX = pointerInfo.event.movementX;
+                var mouseY = pointerInfo.event.movementY;
+                player.rotate(BABYLON.Axis.Y, mouseX * engine.getDeltaTime() / mouseSens, BABYLON.Space.WORLD);
+	        }
 	    }
 	    
         switch (pointerInfo.type) {
@@ -134,74 +153,72 @@ function init(scene) {
     scene.preventDefaultOnPointerUp = false;
     scene.preventDefaultOnPointerDown = false;
     
-    enemyTypeCOOMER = CreateEnemyBase(monsterTextures.moon2COOM);
-    
     // GUI
-    var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
-    healthText = new BABYLON.GUI.TextBlock();
-    healthText.color = "white";
-    healthText.fontSize = 24;
-    healthText.width = 0.05;
-    healthText.height = 0.05;
-    healthText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    healthText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-    healthText.fontFamily = "Silkscreen";
+    GUIInit(scene);
     
-    sprintText = new BABYLON.GUI.TextBlock();
-    sprintText.color = "white";
-    sprintText.fontSize = 24;
-    sprintText.width = 0.1;
-    sprintText.height = 0.05;
-    sprintText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    sprintText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
-    sprintText.fontFamily = "Silkscreen";
-    
-    gunImage = new BABYLON.GUI.Image("gun", "res/gun.png");
-    gunImage.height = "512px";
-    gunImage.width = "512px";
-    
-    gunImage.cellId = 0;
-    gunImage.cellWidth = 512;
-    gunImage.cellHeight = 512;
-    
-    gunImage.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-    gunImage.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
-    gunImage.top = 50;
-    
-    advancedTexture.addControl(gunImage);
-    advancedTexture.addControl(healthText);
-    advancedTexture.addControl(sprintText);
+    lastPlayerPosition = player.position;
     
     InitMap();
-    Restart();
+    LoadLevel(level);
 }
 
-function Restart() {
-    time = 0;
+function LoadLevel(levelIndex) {
+    if (!mapView) {
+        scene.ambientColor = new BABYLON.Color3(.1, .1, .1);
+    }
 
-    // despawn enemies
+    level = levelIndex;
+    time = 0;
+    
+    currentGameStateTimer = 0;
+    currentGameState =  GameState.Playing;
+    
+    // ################## despawn boss  ##################
+    if (boss != null) {
+        boss.dispose();
+        boss = null;
+        bossHealthText.isVisible = false;
+    }
+    
+    // ################## (de)spawn items ##################
+    if (items)
+        items.forEach(i => {i.dispose()});
+    items = [];
+    //items.push(CreateItem(BOSS_KEY_ID, itemTextures.key, 0, MAP_HEIGHT-1, "res/DungeonCrawlStone/item/misc/key.png"));
+    items.push(CreateItem(BOSS_KEY_ID, itemTextures.key, Math.floor(Math.random() * MAP_WIDTH), Math.floor(Math.random() * MAP_HEIGHT), "res/DungeonCrawlStone/item/misc/key.png"));
+    
+    // ################## (de)spawn enemies ##################
     if (enemies)
         enemies.forEach(e => {e.dispose()});
     enemies = [];
-    for (var i=0; i<20; i++) {
-        var x = 10 + Math.floor(Math.random() * MAP_WIDTH - 10);
-        var y = 10 + Math.floor(Math.random() * MAP_HEIGHT - 10);
+    
+    var monsterTextureKeys = Object.keys(monsterTextures);
+    for (var i=0; i<10; i++) {
+        var x = Math.floor(Math.random() * MAP_WIDTH);
+        var y = Math.floor(Math.random() * MAP_HEIGHT);
         
-        enemies.push(CreateEnemy(enemyTypeCOOMER, x, y));
+        var randomTexture = monsterTextures[monsterTextureKeys[Math.floor(Math.random()*monsterTextureKeys.length)]];
+        enemies.push(CreateBasicEnemy(x, y, DefaultEnemyUpdate, randomTexture));
     }
     
+    var bossTextureKeys = Object.keys(bossTextures);
+    var bossTexture = bossTextures[bossTextureKeys[level % bossTextureKeys.length]];
+    enemies.push(CreatePatrolEnemy(MAP_WIDTH-1, MAP_HEIGHT-1, bossTexture));
+    
+    // ################## despawn projectiles ##################
     if (projectiles)
         projectiles.forEach(p => {p.dispose()});
     projectiles = [];
 
-    player.position = new BABYLON.Vector3(0, TILE_SIZE / 2, 0);
+    //player.position = new BABYLON.Vector3(0, TILE_SIZE / 2, (MAP_HEIGHT-1)*TILE_SIZE); // boss room
+    player.position = new BABYLON.Vector3(0, PLAYER_HEIGHT / 2, 0); // level start
     camera.angle = Math.PI/2;
     player.data = {
         health: 100,
         sprintMax: 100,
         sprint: 100,
-        sprintCost: 5,
-        sprintRegen: 0.1,
+        sprintCost: 1,
+        sprintRegen: 0.009,
         
         attackOnCooldown: false,
         attackCooldown: 200,
@@ -209,184 +226,229 @@ function Restart() {
         attackRange: 100,
         damage: 10,
         
-        speed: 0.1,
+        speed: 0.05,
+        interactionRange: 15,
+        
+        inventory: {
+            items: [],
+        },
+        
+        takeDamage: function(d) {
+            player.data.health -= d;
+        },
     };
     
+    
+    infoMessages = [];
+    infoMessages.push({
+        message: "Level " + (level+1),
+        timeLeft: 4000,
+    });
+    
+    
     GenerateMap();
+    firstGameLoop = true;
 }
 
 function Update() {
-    var forward = player.getDirection(new BABYLON.Vector3(0, 0, 1));
-    var right = player.getDirection(new BABYLON.Vector3(1, 0, 0));
-    
     var delta = engine.getDeltaTime();
     time += delta;
     
-    // update GUI
-    healthText.text = player.data.health + " HP";
-    sprintText.text = Math.floor(player.data.sprint / player.data.sprintMax * 100) + " STAMINA";
+    // ################# GAME STATE ##################
     
-    // TODO delta time seems scuffed
-    var delta = engine.getDeltaTime();
-    
-    // #################  movement #################
-    
-    var playerMovement = new BABYLON.Vector3(0, 0, 0);
-    var playerSpeed = player.data.speed;
-    
-    if (keyboard["Shift"]) {
-        if (player.data.sprint > player.data.sprintCost) {
-            playerSpeed = 2 * playerSpeed;
-            player.data.sprint -= player.data.sprintCost;
-        }
-    }
-    
-    if (keyboard["w"]) {
-        playerMovement.x = forward.x;
-        playerMovement.z = forward.z;
-    }
-    else if (keyboard["s"]) {
-        playerMovement.x = -forward.x;
-        playerMovement.z = -forward.z;
-    }
-    if (keyboard["d"]) {
-        playerMovement.x = right.x;
-        playerMovement.z = right.z;
-    }
-    else if (keyboard["a"]) {
-        playerMovement.x = -right.x;
-        playerMovement.z = -right.z;
-    }
-    
-    // TODO remove debug
-    if (keyboard[" "]) {
-        playerMovement.y = 0.1;
-    }
-    else if (keyboard["Ctrl"]) {
-        playerMovement.y = -0.1;
-    }
-    
-    // #################   sprint   #################
-    if (player.data.sprint < player.data.sprintMax) {
-        player.data.sprint += player.data.sprintRegen * delta;
-    }
-    
-    // #################  attacking  #################
-    
-    
-    if (player.data.attackOnCooldown) {
-        // dispay shoot anim
-        if (player.data.attackTimer < player.data.attackCooldown / 10) {
-            gunImage.cellId = 1;
-            flashlight.intensity = 10;
-        }
-        else {
-            flashlight.intensity = 1;
-            gunImage.cellId = 2;
-        }
-    
-        // reset cooldown
-        player.data.attackTimer += delta;
-        if (player.data.attackTimer > player.data.attackCooldown) {
-            player.data.attackOnCooldown = false;
-            player.data.attackTimer = 0;
-        }
-    }
-    else {
-        if (mouse[2] && mouse[0]) {
-            // shoot
-            if (!player.data.attackOnCooldown) {
-                Attack(forward);
-            }
-        }
-        else if (mouse[2]) {
-            // aim
-            gunImage.cellId = 0;
-            gunImage.top = 0;
-            
-            playerSpeed = playerSpeed / 2;
-        }
-        else {
-            // idle
-            gunImage.cellId = 0;
-            gunImage.top = 50;
-        }
-    }
-    
-    player.moveWithCollisions(playerMovement.scale(playerSpeed * delta));
-    
-    // move flashlight
-    if (flashlight != null) {
-        flashlight.position.copyFrom(player.position);
-        flashlight.direction = player.forward;
-    }
-    
-    // ################# enemies #################
-    for (var i=0; i<enemies.length; i++) {
-        var enemy = enemies[i];
+    if (currentGameState == GameState.Playing) {
+        // #################  GUI  #################
+        healthText.text = player.data.health + " HP";
+        sprintText.text = Math.floor(player.data.sprint / player.data.sprintMax * 100) + " STAMINA";
         
-        // remove dead enemies
-        if (enemy.data.health <= 0) {
-            DestroyEnemy(enemy);
-            enemies.splice(i, 1);
-        }
-        else {
-            if (CanSeePlayer(enemy)) {
-                enemy.material.diffuseColor  = new BABYLON.Color3(.3,0,0);
-                enemy.material.emissiveColor = new BABYLON.Color3(.3,0,0);
-                
-                FollowPlayer(enemy);
+        for (var i=0; i<INVENTORY_CAPACITY; i++) {
+            var item = player.data.inventory.items[i];
+            if (item) {
+                if (item.res !== inventoryImages[i].source) {
+                    inventoryImages[i].source = item.res;
+                }
+                inventoryImages[i].isVisible = true;
             }
             else {
-                enemy.material.diffuseColor  = new BABYLON.Color3(0,0,0);
-                enemy.material.emissiveColor = new BABYLON.Color3(0,0,0);
-                
-                
-                // move to random point on map
-                if (!PathCompleted(enemy, enemy.data.currentPath)) {
-                    MoveAlongPath(enemy, enemy.data.currentPath);
-                }
-                else {
-                    // path done, find new path
-                    var x = Math.floor(Math.random() * MAP_WIDTH);
-                    var y = Math.floor(Math.random() * MAP_HEIGHT);
-                    
-                    enemy.data.currentPath = FindPath(enemy, x, y);
-                    //DrawDebugPath(enemy, enemy.data.currentPath);
-                }
+                inventoryImages[i].isVisible = false;
             }
+        }
+        
+        infoText.text = "";
+        for (var i=0; i<infoMessages.length; i++) {
+            var infoMessage = infoMessages[i];
+            
+            infoText.text = infoText.text + "\n" + infoMessage.message;
+            
+            infoMessage.timeLeft -= delta;
+            if (infoMessage.timeLeft <= 0) {
+                infoMessages.splice(i, 1);
+            }
+        }
+        
+        // ################# player #################
+        PlayerUpdate();
+        
+        // ################# items #################
+        for (var i=0; i<items.length; i++) {
+            var item = items[i];
+            
+            // collect if players walks over
+            if (!firstGameLoop) { // for some reason collides with player at beginning of game?
+                if (item.intersectsMesh(player, false)) {
+                    if (player.data.inventory.items.length < INVENTORY_CAPACITY) {
+                        item.dispose();
+                        player.data.inventory.items.push(item.data);
+                        items.splice(i, 1);
+                    }
+                }
+            }   
             
             // rotate towards player
-            enemy.rotationQuaternion = RotateTowardsMe(player.position, enemy.position);
+            item.rotationQuaternion = RotateTowardsMe(player.position, item.position);
         }
-    }
-    
-    // ################# projectiles #################
-    for (var i=0; i<projectiles.length; i++) {
-        var p = projectiles[i];
         
-        // rotate towards player
-        var d = p.position.subtract(player.position);
-        d.normalize();
-        var rotation = Math.atan2(d.z, d.x) - Math.PI / 2;
-        var axis = new BABYLON.Vector3(0, 1, 0);
-        var quaternion = new BABYLON.Quaternion.RotationAxis(axis, -rotation);
-        p.rotationQuaternion = quaternion;
+        // ################# enemies #################
+        for (var i=0; i<enemies.length; i++) {
+            var enemy = enemies[i];
+            
+            // remove dead enemies
+            if (enemy.data.health <= 0) {
+                DestroyEnemy(enemy);
+                enemies.splice(i, 1);
+            }
+            else {
+                // nice
+                enemy.data.update(enemy);
+                
+                // rotate towards player
+                enemy.rotationQuaternion = RotateTowardsMe(player.position, enemy.position);
+                
+                // close opened doors
+                for (var d=0; d<enemy.data.openedDoors.length; d++) {
+                
+                    var door = enemy.data.openedDoors[d];
+                    var distance = door.position.subtract(enemy.position).length();
+                
+                    if (distance > TILE_SIZE) {
+                        door.data.close(enemy);
+                        enemy.data.openedDoors.splice(d, 1);
+                    }
+                }
+                
+                // white if taken damage
+                if (time - enemy.data.timeLastDamage < 100) {
+                    enemy.material.emissiveColor = new BABYLON.Color3(1, 0, 0);
+                    enemy.material.specularColor = new BABYLON.Color3(.5, 0.2, .2);
+                }
+                else {
+                    enemy.material.specularColor = new BABYLON.Color3(0, 0, 0);
+                    enemy.material.emissiveColor = new BABYLON.Color3(0, 0, 0);
+                }
+            }
+        }
+        
+        // ################# projectiles #################
+        for (var i=0; i<projectiles.length; i++) {
+            var p = projectiles[i];
+            var destroy = false;
+            
+            // rotate towards player
+            var d = p.position.subtract(player.position);
+            d.normalize();
+            var rotation = Math.atan2(d.z, d.x) - Math.PI / 2;
+            var axis = new BABYLON.Vector3(0, 1, 0);
+            var quaternion = new BABYLON.Quaternion.RotationAxis(axis, -rotation);
+            p.rotationQuaternion = quaternion;
 
-        // move
-        p.position.copyFrom(p.position.add(p.data.direction.scale(delta / 1000)));
+            // move
+            p.position = p.position.add(p.data.direction.scale(p.data.speed * delta));
+            
+            p.data.destroyTimer -= delta;
+            if (p.data.destroyTimer < 0) {
+                destroy = true;
+            }
+            if (p.intersectsMesh(player, false)) {
+                player.data.takeDamage(p.data.damage);
+                destroy = true;
+            }
+            
+            if (destroy) {
+                p.dispose();
+                projectiles.splice(i, 1);
+            }
+        }
         
-        p.data.destroyTimer -= delta;
-        if (p.data.destroyTimer < 0) {
-            p.dispose();
-            projectiles.splice(i, 1);
+        // ########### GAME STATE SWITCHES #############
+        
+        if (boss != null) {
+            bossHealthText.isVisible = true;
+            bossHealthText.text = "BOSS: " +  boss.data.health + "HP";
+            
+            if (boss.data.health <= 0) {
+                currentGameStateTimer = 0;
+                currentGameState = GameState.WonLevel;
+            }
+        }
+        
+        if (player.data.health <= 0 && !mapView) {
+            // game over
+            currentGameStateTimer = 0;
+            currentGameState = GameState.LostLevel;
+            
+            // TODO JUMP SCARE SOUND
+            // despawn other enemies
+            if (enemies)
+                enemies.forEach(e => {e.dispose()});
+            
+            scene.ambientColor = new BABYLON.Color3(.8, .8, .8);
+            
+            // spawn boss right in front of player
+            var bossTextureKeys = Object.keys(bossTextures);
+            var bossTexture = bossTextures[bossTextureKeys[level % bossTextureKeys.length]];
+            
+            var forward = player.getDirection(new BABYLON.Vector3(0, 0, 1));
+            forward.y = 0;
+            var pos = player.position.add(forward.scale(2));
+            var enemy = CreateBasicEnemy(0, 0, DefaultEnemyUpdate, bossTexture);
+            enemy.position.x = pos.x;
+            enemy.position.y = PLAYER_HEIGHT/2;
+            enemy.position.z = pos.z;
+            enemy.rotationQuaternion = RotateTowardsMe(player.position, enemy.position);
+            console.log(enemy.position)
+            enemies.push(enemy);
         }
     }
-    
-    if (player.data.health <= 0 && !mapView) {
-        // game over
-        Restart();
+    else if (currentGameState == GameState.LostLevel) {
+        if (currentGameStateTimer >= 3000) {
+            LoadLevel(level);
+        }
     }
+    else if (currentGameState == GameState.WonLevel) {
+        if (level == Object.keys(bossTextures).length-1) {
+            infoText.text = "You have defeated all bosses :)";
+            infoText.text = infoText.text + "\n" +  "But you can keep playing if you want";
+            
+            if (currentGameStateTimer >= 4000) {
+                LoadLevel(level+1);
+            }
+        }
+        else {
+            infoText.text = "You beat this level, nice :)";
+            
+            if (currentGameStateTimer >= 4000) {
+                LoadLevel(level+1);
+            }
+        }
+        // allow player to move
+        PlayerUpdate();
+    }
+    
+    currentGameStateTimer += delta;
+    
+    keyboardReleased = [];
+    firstLoop = false;
+    lastPlayerPosition = player.position;
 }
 
 function RotateTowardsMe(mypos, pos) {
@@ -399,31 +461,7 @@ function RotateTowardsMe(mypos, pos) {
     return quaternion;
 }
 
-function Attack(direction) {
-    if (!player.data.attackOnCooldown) {
-        // make sure we dont shoot ourselves
-        var pp = player.position.add(direction);
-
-        var ray = new BABYLON.Ray(pp, direction, player.data.attackRange);
-        var hit = scene.pickWithRay(ray);
-        
-        //let rayHelper = new BABYLON.RayHelper(ray);
-	    //rayHelper.show(scene);
-	    
-        if (hit.pickedMesh) {
-            enemies.forEach(enemy => {
-                if (enemy == hit.pickedMesh) {
-                    // damage enemy
-                    enemy.data.health -= player.data.damage;
-                }
-            });
-        }
-        
-        player.data.attackOnCooldown = true;
-    }
-}
-
-function SpawnProjectile() {
+function SpawnProjectile(pos, info) {
     // TODO instanced rendering for HUGE FPS
 
     var projectile = BABYLON.MeshBuilder.CreatePlane("projectile", {height: 2, width: 2}, scene);
@@ -436,12 +474,10 @@ function SpawnProjectile() {
     var camDirection = camera.getDirection(new BABYLON.Vector3(0, 0, 1));
     
     projectile.material = mat;
-    projectile.position.copyFrom(camera.position.add(camDirection.scale(5)));
+    projectile.position.copyFrom(pos);
     
-    projectile.data = {
-        direction: camDirection.scale(projectileSpeed),
-        destroyTimer: 5000
-    };
+    projectile.data = info;
+    
     projectiles.push(projectile);
 }
 

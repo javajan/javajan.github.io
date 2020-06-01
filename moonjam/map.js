@@ -1,5 +1,7 @@
-let MAP_WIDTH = 30, MAP_HEIGHT = 30;
+let MAP_WIDTH = 20, MAP_HEIGHT = 20;
 let TILE_SIZE = 20;
+
+let BOSS_ROOM_WIDTH = 10, BOSS_ROOM_HEIGHT = 10;
 
 let DOOR_PROBABILITY = 0.05;
 
@@ -19,7 +21,10 @@ var currentRoomStyleIndex;
 
 function InitMap() {
     // create ground hitbox
-    var ground = BABYLON.MeshBuilder.CreateGround("ground", {width: MAP_WIDTH * TILE_SIZE, height: MAP_HEIGHT * TILE_SIZE}, scene);
+    var ground = BABYLON.MeshBuilder.CreateGround("ground", {
+                                                        width: MAP_WIDTH * TILE_SIZE, 
+                                                        height: (MAP_HEIGHT + BOSS_ROOM_HEIGHT * 2) * TILE_SIZE
+                                                  }, scene);
     ground.material = new BABYLON.StandardMaterial("groundMat", scene);
     ground.isVisible = false;
     ground.checkCollisions = true;
@@ -28,8 +33,6 @@ function InitMap() {
     // create room styles
     roomStyles = [];
     currentRoomStyleIndex = 0;
-    
-    var doorBase = CreateDoorBase(scene, "style3", tileTextures.open_door);
     
     var stoneStyle = {
         floors: [
@@ -46,7 +49,6 @@ function InitMap() {
             CreateWallBase(scene, "stone2", tileTextures.catacombs_3),
             CreateWallBase(scene, "stone2", tileTextures.catacombs_4),
         ],
-        doors: [doorBase]
     };
     
     var etchedStyle = {
@@ -63,7 +65,6 @@ function InitMap() {
             CreateWallBase(scene, "relief_brown", tileTextures.relief_brown_2),
             CreateWallBase(scene, "relief_brown", tileTextures.relief_brown_3),
         ],
-        doors: [doorBase]
     };
     
     var fleshStyle = {
@@ -81,7 +82,6 @@ function InitMap() {
             CreateWallBase(scene, "wall_flesh", tileTextures.wall_flesh_5),
             CreateWallBase(scene, "wall_flesh", tileTextures.wall_flesh_6),
         ],
-        doors: [doorBase]
     };
     
     var stoneStyle2 = {
@@ -97,7 +97,6 @@ function InitMap() {
             CreateWallBase(scene, "stone", tileTextures.brick_dark_5),
             CreateWallBase(scene, "stone", tileTextures.brick_dark_6),
         ],
-        doors: [doorBase]
     };
     
     var style3 = {
@@ -120,7 +119,6 @@ function InitMap() {
             CreateWallBase(scene, "style3", tileTextures.hell_8),
             CreateWallBase(scene, "style3", tileTextures.hell_9),
         ],
-        doors: [doorBase]
     };
     
     roomStyles.push(stoneStyle);
@@ -141,11 +139,10 @@ function GenerateMap() {
                 floor.dispose();
             });
         });
-        
     }
     
-    map = {rooms: [], tiles: []};
-    for (var y=0; y<MAP_HEIGHT; y++) {
+    map = {rooms: [], tiles: [], doors: [], bossRoomDoor: null};
+    for (var y=0; y<MAP_HEIGHT+BOSS_ROOM_HEIGHT; y++) {
         map.tiles[y] = [];
     }
 
@@ -190,7 +187,7 @@ function GenerateMap() {
                     var newTile = CreateFloor(scene, x, y, room);
                     
                     if (door) {
-                        CreateDoor(scene, currentTile, newTile);
+                        CreateDoor(scene, currentTile, newTile, null, false);
                     }
                     else {
                         CreatePassage(scene, currentTile, newTile);
@@ -204,6 +201,28 @@ function GenerateMap() {
             }
         }
     }
+    
+    // create boss room
+    var bossRoom = CreateRoom();
+    for (var y=0; y < BOSS_ROOM_HEIGHT; y++) {
+        for (var x=0; x<BOSS_ROOM_WIDTH; x++) {
+            var floor = CreateFloor(scene, x, y + MAP_HEIGHT, bossRoom);
+            
+            if (y == 0) {
+                CreateWall(scene, x, MAP_HEIGHT, x, MAP_HEIGHT - 1, scene);   
+            }
+            else if (y == BOSS_ROOM_HEIGHT - 1) {
+                CreateWall(scene, x, y + MAP_HEIGHT, x, y + MAP_HEIGHT + 1, scene);
+            }
+        }
+        
+        // create walls KKona
+        CreateWall(scene, 0, y + MAP_HEIGHT, -1, y + MAP_HEIGHT, scene);
+        CreateWall(scene, BOSS_ROOM_WIDTH-1, y + MAP_HEIGHT, BOSS_ROOM_WIDTH, y + MAP_HEIGHT, scene);
+    }
+    //var bossRoomDoorX = Math.floor(Math.random() * BOSS_ROOM_WIDTH);
+    var bossRoomDoorX = 0;
+    map.bossRoomDoor = CreateDoor(scene, GetFloor(bossRoomDoorX, MAP_HEIGHT), GetFloor(bossRoomDoorX, MAP_HEIGHT-1), BOSS_KEY_ID, true);
 }
 
 function CreateRoom() {
@@ -231,7 +250,7 @@ function CreateFloor(scene, x, y, room) {
     return floorI;
 }
 
-function CreateDoor(scene, floor1, floor2) {
+function CreateDoor(scene, floor1, floor2, requiredItem, bossDoor) {
     var x1 = floor1.position.x / TILE_SIZE;
     var y1 = floor1.position.z / TILE_SIZE;
     var x2 = floor2.position.x / TILE_SIZE;
@@ -240,7 +259,24 @@ function CreateDoor(scene, floor1, floor2) {
     var direction = GetDirection(x1, y1, x2, y2);
     var inverted = InvertDirection(direction);
     
-    var door = RandomArrayElement(floor1.data.room.style.doors).createInstance("passage_"+x1+"_"+y1+"_"+x2+"_"+y2);
+    var door = BABYLON.MeshBuilder.CreatePlane("passage_"+x1+"_"+y1+"_"+x2+"_"+y2, {height: TILE_SIZE, width: TILE_SIZE, sideOrientation: BABYLON.Mesh.DOUBLESIDE}, scene);
+    var mat = new BABYLON.StandardMaterial(name + "_door_material", scene);
+    
+    if (bossDoor) {
+        mat.diffuseTexture = tileTextures.sealed_door;
+    }
+    else {
+        mat.diffuseTexture = tileTextures.closed_door;
+    }
+    mat.ambientColor = new BABYLON.Color3(1,1,1);
+    mat.specularColor = new BABYLON.Color3(0,0,0);
+    
+    door.material = mat;
+    
+    var doorHitBox = BABYLON.MeshBuilder.CreateBox("doorhb" + x2 + "_" + y2, {width: TILE_SIZE, height: TILE_SIZE, depth: 0.1}, scene);
+    doorHitBox.checkCollisions = true;
+    doorHitBox.isVisible = false;
+    doorHitBox.parent = door;
     
     var dx = x2 - x1;
     var dy = y2 - y1;
@@ -268,11 +304,79 @@ function CreateDoor(scene, floor1, floor2) {
     }
     door.rotate(BABYLON.Axis.Y, rotation, BABYLON.Space.WORLD);
     door.data = {
-        isPassable: true
+        requiredItem: requiredItem,
+        isOpenAllowed: true,
+        isDoor: true,
+        isOpen: false,
+        isPassable: true,
+        interactable: true,
+        close: function(p) {
+            door.material.diffuseTexture = tileTextures.closed_door;
+            door.data.isOpen = false;
+            doorHitBox.checkCollisions = true;
+        },
+        open: function(p) {
+            if (door.data.isOpenAllowed) {
+                var canOpen = true;
+                
+                if (door.data.requiredItem != null) {
+                    var hasItem = false;
+                    for (var i=0; i<p.data.inventory.items.length && !hasItem; i++) {
+                        var item = p.data.inventory.items[i];
+                        if (item.name === requiredItem) {
+                            hasItem = true;
+                            p.data.inventory.items.splice(i, 1);
+                            
+                            // no need for item any more
+                            door.data.requiredItem = null;
+                        }
+                    }
+                    if (!hasItem && p == player) {
+                        infoMessages.push({
+                            message: "Requires item: " + requiredItem,
+                            timeLeft: 1000,
+                        });
+                    }
+                    
+                    canOpen = hasItem;
+                }
+                
+                if (canOpen) {
+                    door.material.diffuseTexture = tileTextures.open_door;
+                    door.data.isOpen = true;
+                    doorHitBox.checkCollisions = false;
+                }
+            }
+            else if (p == player) {
+                infoMessages.push({
+                    message: "No :)",
+                    timeLeft: 1000,
+                });
+            }
+        },
+        interact: function(p) {
+            // open / close door
+            if (door.data.isOpen) {
+                door.data.close(p);
+            }
+            else {
+                door.data.open(p);
+            }
+        },
     };
+    
+    // dispose old wall etc.
+    if (floor1.data.edges[direction] && typeof floor1.data.edges[direction].dispose === 'function')
+        floor1.data.edges[direction].dispose();
+    if (floor2.data.edges[inverted] && typeof floor2.data.edges[inverted].dispose === 'function')
+        floor2.data.edges[inverted].dispose();
     
     floor1.data.edges[direction] = door;
     floor2.data.edges[inverted] = door;
+    
+    map.doors.push(door);
+    
+    return door;
 }
 
 function CreatePassage(scene, floor1, floor2) {
@@ -349,7 +453,9 @@ function CreateWall(scene, x1, y1, x2, y2, scene) {
 }
 
 function GetFloor(x, y) {
-    if (x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT) {
+    if (x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT + BOSS_ROOM_HEIGHT) {
+        if (y >= MAP_HEIGHT && x >= BOSS_ROOM_WIDTH)
+            return null;
         return map.tiles[y][x];
     }
     return null;
@@ -383,20 +489,6 @@ function CreateFloorBase(scene, name, texture) {
 function CreateWallBase(scene, name, texture) {
     var mesh = BABYLON.MeshBuilder.CreatePlane(name + "_wall", {height: TILE_SIZE, width: TILE_SIZE}, scene);
     var mat = new BABYLON.StandardMaterial(name + "_wall_material", scene);
-    
-    mat.diffuseTexture = texture;
-    mat.ambientColor = new BABYLON.Color3(1,1,1);
-    mat.specularColor = new BABYLON.Color3(0,0,0);
-    
-    mesh.material = mat;
-    mesh.isVisible = false;
-    
-    return mesh;
-}
-
-function CreateDoorBase(scene, name, texture) {
-    var mesh = BABYLON.MeshBuilder.CreatePlane(name + "_door", {height: TILE_SIZE, width: TILE_SIZE, sideOrientation: BABYLON.Mesh.DOUBLESIDE}, scene);
-    var mat = new BABYLON.StandardMaterial(name + "_door_material", scene);
     
     mat.diffuseTexture = texture;
     mat.ambientColor = new BABYLON.Color3(1,1,1);

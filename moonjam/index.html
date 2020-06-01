@@ -44,6 +44,10 @@
         <script src="https://preview.babylonjs.com/babylon.js"></script>
         <script src="https://preview.babylonjs.com/gui/babylon.gui.min.js"></script>
         <script src="https://preview.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+        <script src="boss.js"></script>
+        <script src="gui.js"></script>
+        <script src="item.js"></script>
+        <script src="player.js"></script>
         <script src="ai.js"></script>
         <script src="game.js"></script>
         <script src="assets.js"></script>
@@ -71,6 +75,13 @@
                     monsterTextures[image.name] = task.texture;
                 }
             });
+            bossAssets.forEach(image => {
+                assetsManager.addTextureTask(image.name, image.filename).onSuccess = function(task) {
+                    task.texture.hasAlpha = true;
+                    task.texture.updateSamplingMode(BABYLON.Texture.NEAREST_SAMPLINGMODE);
+                    bossTextures[image.name] = task.texture;
+                }
+            });
             tileAssets.forEach(image => {
                 assetsManager.addTextureTask(image.name, image.filename).onSuccess = function(task) {
                     task.texture.hasAlpha = true;
@@ -83,6 +94,14 @@
                     task.texture.hasAlpha = true;
                     task.texture.updateSamplingMode(BABYLON.Texture.NEAREST_SAMPLINGMODE);
                     effectTextures[image.name] = task.texture;
+                }
+            });
+            
+            itemAssets.forEach(image => {
+                assetsManager.addTextureTask(image.name, image.filename).onSuccess = function(task) {
+                    task.texture.hasAlpha = true;
+                    task.texture.updateSamplingMode(BABYLON.Texture.NEAREST_SAMPLINGMODE);
+                    itemTextures[image.name] = task.texture;
                 }
             });
             
