@@ -194,8 +194,8 @@ function LoadLevel(levelIndex) {
     if (items)
         items.forEach(i => {i.dispose()});
     items = [];
-    //items.push(CreateItem(BOSS_KEY_ID, itemTextures.key, 0, MAP_HEIGHT-1, "res/DungeonCrawlStone/item/misc/key.png"));
-    items.push(CreateItem(BOSS_KEY_ID, itemTextures.key, Math.floor(Math.random() * MAP_WIDTH), Math.floor(Math.random() * MAP_HEIGHT), "res/DungeonCrawlStone/item/misc/key.png"));
+    items.push(CreateItem(BOSS_KEY_ID, itemTextures.key, 0, 2, "res/DungeonCrawlStone/item/misc/key.png"));
+    //items.push(CreateItem(BOSS_KEY_ID, itemTextures.key, Math.floor(Math.random() * MAP_WIDTH), Math.floor(Math.random() * MAP_HEIGHT), "res/DungeonCrawlStone/item/misc/key.png"));
     
     // ################## (de)spawn enemies ##################
     if (enemies)

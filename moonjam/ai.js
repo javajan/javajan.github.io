@@ -26,8 +26,8 @@ function CreateCustomEnemy(x, y, info, texture) {
 
 function CreatePatrolEnemy(x, y, texture) {
     return CreateCustomEnemy(x, y, {
-        timeToAttack: 500,
-        attackTimer: 500,
+        timeToAttack: 1000,
+        attackTimer: 1000,
         attackRange: 5,
         damage: Infinity,
         health: 100,
