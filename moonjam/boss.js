@@ -1,62 +1,61 @@
 
 
 function CreateBossInfo(index) {
-    if (index == 0) {
-        return {
-            patternIndex: 0,
-            patternTimer: 0,
-            patterns: [
-            {
-                duration: 10000,
-                function: AttackPatternDirect, 
-            },
-            {
-                duration: 10000,
-                function: AttackPatternCircle, 
-            },
-            {
-                duration: 10000,
-                function: AttackPatternEasy, 
-            },
-            {
-                duration: 10000,
-                function: AttackPatternCircleClosingAndOpening, 
-            },
-            {
-                duration: 10000,
-                function: AttackPatternRandom, 
-            },
-            ],
-            attackTimer: 0,
-            damage: 5,
-            takeDamage: function(enemy, d) {
-                enemy.data.health -= d;
-                enemy.data.timeLastDamage = time;
-            },
-            health: 3000,
-            timeLastDamage: -Infinity,
-            openedDoors: [],
-            inventory: {
-                items: [],
-            },
-            update: function(boss) {
-                var index = boss.data.patternIndex;
-                var patterns = boss.data.patterns;
-                var pattern = boss.data.patterns[index];
-                
-                pattern.function(boss, pattern);
-                
-                // new pattern if timer                
-                boss.data.patternTimer += engine.getDeltaTime();
-                if (boss.data.patternTimer > pattern.duration) {
-                    boss.data.patternIndex = (index + 1) % boss.data.patterns.length;
-                    boss.data.patternTimer = 0; 
-                }
-            },
-        };
-    }
+    var damage = 10 + (index * 10);
+    var health = 3000 + (index * 1000);
     
-    return null;
+    return {
+        patternIndex: 0,
+        patternTimer: 0,
+        patterns: [
+        {
+            duration: 10000,
+            function: AttackPatternDirect, 
+        },
+        {
+            duration: 10000,
+            function: AttackPatternCircle, 
+        },
+        {
+            duration: 10000,
+            function: AttackPatternEasy, 
+        },
+        {
+            duration: 10000,
+            function: AttackPatternCircleClosingAndOpening, 
+        },
+        {
+            duration: 10000,
+            function: AttackPatternRandom, 
+        },
+        ],
+        attackTimer: 0,
+        damage: damage,
+        takeDamage: function(enemy, d) {
+            enemy.data.health -= d;
+            enemy.data.timeLastDamage = time;
+        },
+        health: health,
+        timeLastDamage: -Infinity,
+        openedDoors: [],
+        inventory: {
+            items: [],
+        },
+        update: function(boss) {
+            var index = boss.data.patternIndex;
+            var patterns = boss.data.patterns;
+            var pattern = boss.data.patterns[index];
+            
+            pattern.function(boss, pattern);
+            
+            // new pattern if timer                
+            boss.data.patternTimer += engine.getDeltaTime();
+            if (boss.data.patternTimer > pattern.duration) {
+                boss.data.patternIndex = (index + 1) % boss.data.patterns.length;
+                boss.data.patternTimer = 0; 
+            }
+        },
+    }
 }
 
 function BossShoot(boss, direction, speed) {

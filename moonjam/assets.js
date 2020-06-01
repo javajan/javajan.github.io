@@ -1,3 +1,16 @@
+var sounds = {};
+var soundAssets = [
+    {name:"gun", filename: "sound/gunshot.mp3"},
+    {name:"grunt1", filename: "sound/PlayerPainGrunt1.mp3"},
+    {name:"grunt2", filename: "sound/PlayerPainGrunt2.mp3"},
+    {name:"grunt3", filename: "sound/PlayerPainGrunt3.mp3"},
+    {name:"grunt4", filename: "sound/PlayerPainGrunt4.mp3"},
+    {name:"jumpscare", filename: "sound/jumpscare.mp3"},
+    {name:"baby", filename: "sound/baby.mp3"},
+    {name:"music", filename: "sound/music.mp3"},
+    {name:"enemy_hurt", filename: "sound/enemy_hurt.wav"},
+];
+
 var tileTextures = {};
 var tileAssets = [
     {name:"brick_dark_3", filename: "res/DungeonCrawlStone/dungeon/wall/brick_dark_3.png"},

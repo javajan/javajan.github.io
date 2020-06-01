@@ -1,6 +1,57 @@
 
 var camera;
 
+var attributions = [
+    {
+        title: "Male_Grunt.wav",
+        author: "Nox_Sound",
+        link: "https://freesound.org/people/Nox_Sound/sounds/474650",
+        license: "CC0",
+    },
+    {
+        title: "Small pistol gunshot indoors",
+        author: "acidsnowflake",
+        link: "https://freesound.org/people/acidsnowflake/sounds/402789",
+        license: "CC0",
+    },
+    {
+        title: "Art",
+        author: "Dungeon Crawl Soup",
+        link: "https://opengameart.org/content/dungeon-crawl-32x32-tiles-supplemental",
+        license: "CC0",
+    },
+    {
+        title: "2-4 baby laugh.wav (Edited)",
+        author: "viktorullri",
+        link: "https://freesound.org/people/viktorullri/sounds/461789/",
+        license: "CC0",
+    },
+    {
+        title: "2-4 baby laugh.wav (Edited)",
+        author: "viktorullri",
+        link: "https://freesound.org/people/viktorullri/sounds/461789/",
+        license: "CC0",
+    },
+    {
+        title: "2-4 baby laugh.wav (Edited)",
+        author: "viktorullri",
+        link: "https://freesound.org/people/viktorullri/sounds/461789/",
+        license: "CC0",
+    },
+    {
+        title: "Ghosts in the wind",
+        author: "Abstract Audio",
+        link: "http://dig.ccmixter.org/files/Citizen_X0/29247",
+        license: "CC BY 3.0",
+    },
+    {
+        title: "Simple Hit/Hurt Sound",
+        author: "Davidsraba",
+        link: "https://freesound.org/people/Davidsraba/sounds/448801/",
+        license: "CC0",
+    },    
+];
+
 var keyboard = [];
 var keyboardReleased = [];
 
@@ -42,6 +93,9 @@ let GameState = {
 }   
 var currentGameState = GameState.Playing;
 var currentGameStateTimer = 0;
+
+var babyLaughTime = Math.random() * 120 + 120;
+var babyLaughTimer = 0;
 
 
 function init(scene) {
@@ -93,7 +147,7 @@ function init(scene) {
         switch (kbInfo.type) {
             case BABYLON.KeyboardEventTypes.KEYDOWN:
                 keyboard[kbInfo.event.key] = true;
-                if (kbInfo.event.key == "r") {
+                if (kbInfo.event.key == "p") {
                     LoadLevel(level);
                 }   
                 
@@ -176,7 +230,7 @@ function LoadLevel(levelIndex) {
     if (!mapView) {
         scene.ambientColor = new BABYLON.Color3(.1, .1, .1);
     }
-
+    
     level = levelIndex;
     time = 0;
     
@@ -194,8 +248,11 @@ function LoadLevel(levelIndex) {
     if (items)
         items.forEach(i => {i.dispose()});
     items = [];
-    items.push(CreateItem(BOSS_KEY_ID, itemTextures.key, 0, MAP_HEIGHT-3, "res/DungeonCrawlStone/item/misc/key.png"));
-    //items.push(CreateItem(BOSS_KEY_ID, itemTextures.key, Math.floor(Math.random() * MAP_WIDTH), Math.floor(Math.random() * MAP_HEIGHT), "res/DungeonCrawlStone/item/misc/key.png"));
+    var keyx = Math.floor(Math.random() * MAP_WIDTH / 2);
+    var keyy = Math.floor(Math.random() * MAP_HEIGHT / 2);
+    
+    //items.push(CreateItem(BOSS_KEY_ID, itemTextures.key, 0, MAP_HEIGHT-1, "res/DungeonCrawlStone/item/misc/key.png"));
+    items.push(CreateItem(BOSS_KEY_ID, itemTextures.key, keyx, keyy, "res/DungeonCrawlStone/item/misc/key.png"));
     
     // ################## (de)spawn enemies ##################
     if (enemies)
@@ -203,9 +260,9 @@ function LoadLevel(levelIndex) {
     enemies = [];
     
     var monsterTextureKeys = Object.keys(monsterTextures);
-    for (var i=0; i<15; i++) {
-        var x = Math.floor(Math.random() * MAP_WIDTH);
-        var y = Math.floor(Math.random() * MAP_HEIGHT);
+    for (var i=0; i<10; i++) {
+        var x = Math.floor(Math.random() * MAP_WIDTH / 2);
+        var y = Math.floor(Math.random() * MAP_HEIGHT / 2);
         
         var randomTexture = monsterTextures[monsterTextureKeys[Math.floor(Math.random()*monsterTextureKeys.length)]];
         enemies.push(CreateBasicEnemy(x, y, DefaultEnemyUpdate, randomTexture));
@@ -231,10 +288,10 @@ function LoadLevel(levelIndex) {
         sprintRegen: 0.009,
         
         attackOnCooldown: false,
-        attackCooldown: 200,
+        attackCooldown: 400,
         attackTimer: 0,
         attackRange: 100,
-        damage: 10,
+        damage: 20,
         
         speed: 0.05,
         interactionRange: 15,
@@ -244,10 +301,14 @@ function LoadLevel(levelIndex) {
         },
         
         takeDamage: function(d) {
+            var soundList = [sounds.grunt1,sounds.grunt2,sounds.grunt3,sounds.grunt4];
+            soundList[Math.floor(Math.random() * soundList.length)].play();
+        
             player.data.health -= d;
         },
     };
     
+    infoText.text = "";
     
     infoMessages = [];
     infoMessages.push({
@@ -255,18 +316,39 @@ function LoadLevel(levelIndex) {
         timeLeft: 4000,
     });
     
+    if (level == 0) {
+        infoMessages.push({
+            message: "WASD: move, E: open/close door, Space: sprint, P: reset level",
+            timeLeft: 6000,
+        });
+    }
+    
+    
+    currentGameState = GameState.Playing;
     
     GenerateMap();
     firstGameLoop = true;
 }
 
 function Update() {
+     if (time == 0) {
+        sounds.music.play();
+    }
+
     var delta = engine.getDeltaTime();
     time += delta;
     
     // ################# GAME STATE ##################
     
     if (currentGameState == GameState.Playing) {
+        // random sounds
+        babyLaughTimer += delta;
+        if (babyLaughTimer > babyLaughTime) {
+            babyLaughTimer = 0;
+            babyLaughTime = Math.random() * 60 * 1000 + (120 * 1000);
+            sounds.baby.play();
+        }
+    
         // #################  GUI  #################
         healthText.text = player.data.health + " HP";
         sprintText.text = Math.floor(player.data.sprint / player.data.sprintMax * 100) + " STAMINA";
@@ -304,7 +386,6 @@ function Update() {
             var item = items[i];
             
             // collect if players walks over
-            console.log(firstGameLoop)
             if (!firstGameLoop) { // for some reason collides with player at beginning of game?
                 if (item.intersectsMesh(player, false)) {
                     if (player.data.inventory.items.length < INVENTORY_CAPACITY) {
@@ -410,7 +491,10 @@ function Update() {
             currentGameStateTimer = 0;
             currentGameState = GameState.LostLevel;
             
-            // TODO JUMP SCARE SOUND
+            // play scary sound
+            sounds.jumpscare.play();
+            
+            
             // despawn other enemies
             if (enemies)
                 enemies.forEach(e => {e.dispose()});
@@ -429,7 +513,6 @@ function Update() {
             enemy.position.y = PLAYER_HEIGHT/2;
             enemy.position.z = pos.z;
             enemy.rotationQuaternion = RotateTowardsMe(player.position, enemy.position);
-            console.log(enemy.position)
             enemies.push(enemy);
         }
     }
@@ -442,8 +525,18 @@ function Update() {
         if (level == Object.keys(bossTextures).length-1) {
             infoText.text = "You have defeated all bosses :)";
             infoText.text = infoText.text + "\n" +  "But you can keep playing if you want";
+            infoText.text = infoText.text + "\n\n" +  "Credits:";
             
-            if (currentGameStateTimer >= 6000) {
+            // credits
+            attributions.forEach(a => {
+                infoText.text = infoText.text + "\n" +  "" +  a.title + " by " + a.author + ", License: " + a.license;
+                infoText.text = infoText.text + "\n" +  a.link;
+            });
+            
+            infoText.text = infoText.text + "\n\n" + "CC0 1.0 Unisversal: https://creativecommons.org/publicdomain/zero/1.0/legalcode";
+            infoText.text = infoText.text + "\n\n" + "CC BY 3.0: https://creativecommons.org/licenses/by/3.0/legalcode";
+            
+            if (currentGameStateTimer >= 10000) {
                 LoadLevel(level+1);
             }
         }

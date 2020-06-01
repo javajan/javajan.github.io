@@ -20,7 +20,7 @@ function PlayerUpdate() {
         // spawn boss
         var bossTextureKeys = Object.keys(bossTextures);
         var bossTexture = bossTextures[bossTextureKeys[level % bossTextureKeys.length]];
-        boss = CreateCustomEnemy(Math.floor(BOSS_ROOM_WIDTH/2), MAP_HEIGHT + Math.floor(BOSS_ROOM_HEIGHT/2), CreateBossInfo(0), bossTexture);
+        boss = CreateCustomEnemy(Math.floor(BOSS_ROOM_WIDTH/2), MAP_HEIGHT + Math.floor(BOSS_ROOM_HEIGHT/2), CreateBossInfo(level), bossTexture);
         enemies.push(boss);
     }
     
@@ -30,7 +30,7 @@ function PlayerUpdate() {
     var playerMovement = new BABYLON.Vector3(0, 0, 0);
     var playerSpeed = player.data.speed;
     
-    if (keyboard["Shift"]) {
+    if (keyboard[" "]) {
         if (player.data.sprint > player.data.sprintCost) {
             playerSpeed = 2 * playerSpeed;
             player.data.sprint -= player.data.sprintCost;
@@ -139,6 +139,10 @@ function PlayerUpdate() {
 
 function Attack(direction) {
     if (!player.data.attackOnCooldown) {
+        
+        // gun sound
+        sounds.gun.play();
+    
         // make sure we dont shoot ourselves
         var pp = player.position.add(direction);
 
@@ -153,6 +157,8 @@ function Attack(direction) {
                 if (enemy == hit.pickedMesh) {
                     // damage enemy
                     enemy.data.takeDamage(enemy, player.data.damage);
+                    
+                    sounds.enemy_hurt.play();
                 }
             });
         }

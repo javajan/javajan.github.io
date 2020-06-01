@@ -5,7 +5,7 @@ var enemySpeed = 0.03;
 let ENEMY_WIDTH = 12, ENEMY_HEIGHT = 12;
 
 // number of tiles
-var enemyViewDistance = 5;
+var enemyViewDistance = 3;
 
 function CreateCustomEnemy(x, y, info, texture) {
     var enemy = BABYLON.MeshBuilder.CreatePlane("enemy", {height: ENEMY_HEIGHT, width: ENEMY_WIDTH}, scene);
@@ -48,10 +48,10 @@ function CreatePatrolEnemy(x, y, texture) {
 
 function CreateBasicEnemy(x, y, update, texture) {
     return CreateCustomEnemy(x, y, {
-        timeToAttack: 500,
-        attackTimer: 500,
+        timeToAttack: 1000,
+        attackTimer: 1000,
         attackRange: TILE_SIZE/2,
-        damage: 10,
+        damage: 20,
         health: 100,
         timeLastDamage: -Infinity,
         openedDoors: [],
@@ -135,8 +135,6 @@ function CanSeePlayer(enemy) {
         return false;
 
     var direction = enemy.position.subtract(player.position).normalize();
-
-    // TODO use multipick and check if door is in front of player, otherwise enemy cant see through doors
 
     var ray = new BABYLON.Ray(player.position, direction, enemyViewDistance * TILE_SIZE);
     var hit = scene.pickWithRay(ray, RaycastNotPlayerAndNotOpenDoor);

@@ -237,7 +237,6 @@ function CreateFloor(scene, x, y, room) {
     floorI.position.x = x * TILE_SIZE;
     floorI.position.z = y * TILE_SIZE;
     
-    // NORTH, EAST, SOUTH, WEST TODO maybe not name edges
     floorI.data = {};
     floorI.data.edges = [null, null, null, null];
     

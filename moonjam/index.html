@@ -105,6 +105,32 @@
                 }
             });
             
+            soundAssets.forEach(sound => {
+                assetsManager.addBinaryFileTask(sound.name, sound.filename).onSuccess = function(task) {
+                    var volume = 0.2;
+                    var loop = false;
+                    var autoplay = false;
+                    
+                    if (sound.name === "jumpscare") {
+                        volume = 1;
+                    }
+                    else if (sound.name === "music") {
+                        volume = 0.1;
+                        loop = true;
+                        autplay = true;
+                    }
+                    else if (sound.name === "enemy_hurt") {
+                        volume = 1.0;
+                    }
+                
+                    sounds[sound.name] = new BABYLON.Sound(sound.name, task.data, scene, null, {
+                        volume: volume,
+                        loop: loop,
+                        autoplay: autoplay,
+                    });
+                }
+            });
+            
             assetsManager.onTaskErrorObservable.add(function(task) {
                 console.log('task failed', task.errorObject.message, task.errorObject.exception);
             });
@@ -115,8 +141,7 @@
             assetsManager.onFinish = function(tasks) {
                 
                 init(scene);
-                //BABYLON.SceneOptimizer.OptimizeAsync(scene,	OptimizerOptions(), null, null);
-            
+                
                 engine.runRenderLoop(function() {
                     Update();
                     scene.render();
@@ -127,36 +152,6 @@
             };
             
             assetsManager.load();
-            
-            
-            var OptimizerOptions = function() {
-	            var result = new BABYLON.SceneOptimizerOptions(30, 2000); // limit 30 FPS min here
-
-	            var priority = 0;
-	            result.optimizations.push(new BABYLON.ShadowsOptimization(priority));
-	            result.optimizations.push(new BABYLON.LensFlaresOptimization(priority));
-
-	            // Next priority
-	            priority++;
-	            result.optimizations.push(new BABYLON.PostProcessesOptimization(priority));
-	            result.optimizations.push(new BABYLON.ParticlesOptimization(priority));
-
-	            // Next priority
-	            priority++;
-	            result.optimizations.push(new BABYLON.TextureOptimization(priority, 256));
-
-	            // Next priority
-	            priority++;
-	            result.optimizations.push(new BABYLON.RenderTargetsOptimization(priority));
-
-	            // Next priority
-	            priority++;
-	            result.optimizations.push(new BABYLON.HardwareScalingOptimization(priority, 4));
-	            
-	            return result;
-            }
-            
-            
             
             window.addEventListener("resize", function () {
                 engine.resize();
